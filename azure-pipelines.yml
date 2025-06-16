@@ -76,15 +76,14 @@ steps:
     # testRunTitle: '$(Build.DefinitionName) Tests'
     # resultsDirectory: '$(Agent.TempDirectory)/testresults'
 
-- task: PublishTestResults@2 # This task is ONLY for test results (pass/fail)
-  displayName: 'Publish Test Results'
+- task: DotNetCoreCLI@2
+  displayName: 'Run unit tests & Collect Code Coverage - $(buildConfiguration)'
   inputs:
-    testResultsFormat: 'VSTest' # Keep this as VSTest for .trx files from dotnet test
-    testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
-    mergeTestResults: true
-    failTaskOnFailedTests: false
-    testRunTitle: 'Unit Tests - $(buildConfiguration)'
-
+    command: 'test'
+    # !!! CRUCIAL: Arguments for Coverlet to generate Cobertura report !!!
+    arguments: '--no-build --configuration $(buildConfiguration) --results-directory $(Agent.TempDirectory)/TestResults --logger trx /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput=$(Build.SourcesDirectory)/coverage/cobertura.xml'
+    projects: '**/*.Tests.csproj'
+    
 - task: DotNetCoreCLI@2
   displayName: 'Publish the project - $(buildConfiguration)'
   inputs:
