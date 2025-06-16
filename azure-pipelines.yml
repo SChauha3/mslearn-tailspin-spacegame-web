@@ -75,14 +75,6 @@ steps:
     # Optional: Add test results format and output directory if needed
     # testRunTitle: '$(Build.DefinitionName) Tests'
     # resultsDirectory: '$(Agent.TempDirectory)/testresults'
-
-- task: DotNetCoreCLI@2
-  displayName: 'Run unit tests & Collect Code Coverage - $(buildConfiguration)'
-  inputs:
-    command: 'test'
-    # !!! CRUCIAL: Arguments for Coverlet to generate Cobertura report !!!
-    arguments: '--no-build --configuration $(buildConfiguration) --results-directory $(Agent.TempDirectory)/TestResults --logger trx /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput=$(Build.SourcesDirectory)/coverage/cobertura.xml'
-    projects: '**/*.Tests.csproj'
     
 - task: DotNetCoreCLI@2
   displayName: 'Publish the project - $(buildConfiguration)'
