@@ -2,29 +2,48 @@ trigger:
 - '*'
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: 'ubuntu-latest' # 'ubuntu-latest' is already the recommended and up-to-date image alias
 
 variables:
   buildConfiguration: 'Release'
   wwwrootDir: 'Tailspin.SpaceGame.Web/wwwroot'
-  dotnetSdkVersion: '6.x'
+  dotnetSdkVersion: '8.x' # Updated to a more recent LTS version if your project supports it. Change to 6.x if needed.
 
 steps:
 - task: UseDotNet@2
   displayName: 'Use .NET SDK $(dotnetSdkVersion)'
   inputs:
     version: '$(dotnetSdkVersion)'
+    includePreviewVersions: false # Typically set to false unless you specifically need preview versions
+
+# New: Use NodeTool@0 to install Node.js and npm
+- task: NodeTool@0
+  displayName: 'Use Node.js 18.x' # Recommended LTS version
+  inputs:
+    versionSpec: '18.x' # Specify the LTS version of Node.js
 
 - task: Npm@1
   displayName: 'Run npm install'
   inputs:
-    verbose: false
+    verbose: false # Keep as false unless you need verbose output
 
 - script: './node_modules/.bin/node-sass $(wwwrootDir) --output $(wwwrootDir)'
   displayName: 'Compile Sass assets'
+  # Consider adding 'failOnStderr: true' for stricter error checking
+  # failOnStderr: true
 
-- task: gulp@1
+# Replaced gulp@1 with a script task to run gulp
+- script: |
+    npm install -g gulp-cli # Install gulp-cli globally if not already available on the agent
+    gulp --gulpfile $(Build.SourcesDirectory)/gulpfile.js # Adjust the path to your gulpfile if it's not at the root
   displayName: 'Run gulp tasks'
+  # Make sure your gulpfile.js is present in your repository root or adjust the path.
+  # If gulp is installed locally as a dev dependency, you might use:
+  # ./node_modules/.bin/gulp --gulpfile $(Build.SourcesDirectory)/gulpfile.js
+  # Check your package.json scripts for how gulp is typically run.
+  # For example, if you have a "gulp" script in package.json:
+  # script: 'npm run gulp'
+
 
 - script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildinfo.txt'
   displayName: 'Write build info'
@@ -35,6 +54,9 @@ steps:
   inputs:
     command: 'restore'
     projects: '**/*.csproj'
+    # Adding feedsToUse and nugetConfigPath might be necessary for private feeds
+    # feedsToUse: 'config'
+    # nugetConfigPath: 'NuGet.config'
 
 - task: DotNetCoreCLI@2
   displayName: 'Build the project - $(buildConfiguration)'
@@ -49,17 +71,23 @@ steps:
     command: 'test'
     arguments: '--no-build --configuration $(buildConfiguration)'
     publishTestResults: true
-    projects: '**/*.Tests.csproj'    
+    projects: '**/*.Tests.csproj'
+    # Optional: Add test results format and output directory if needed
+    # testRunTitle: '$(Build.DefinitionName) Tests'
+    # resultsDirectory: '$(Agent.TempDirectory)/testresults'
 
 - task: DotNetCoreCLI@2
   displayName: 'Publish the project - $(buildConfiguration)'
   inputs:
     command: 'publish'
     projects: '**/*.csproj'
-    publishWebProjects: false
+    publishWebProjects: false # Set to true if you are publishing a web project specifically
     arguments: '--no-build --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/$(buildConfiguration)'
-    zipAfterPublish: true
+    zipAfterPublish: true # Good for packaging web apps
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
   condition: succeeded()
+  # Default artifact name is 'drop', you can be explicit if preferred
+  # artifactName: 'drop'
+  # pathtoPublish: '$(Build.ArtifactStagingDirectory)' # This is the default
