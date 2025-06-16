@@ -76,6 +76,15 @@ steps:
     # testRunTitle: '$(Build.DefinitionName) Tests'
     # resultsDirectory: '$(Agent.TempDirectory)/testresults'
 
+- task: PublishTestResults@2 # This task is ONLY for test results (pass/fail)
+  displayName: 'Publish Test Results'
+  inputs:
+    testResultsFormat: 'VSTest' # Keep this as VSTest for .trx files from dotnet test
+    testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
+    mergeTestResults: true
+    failTaskOnFailedTests: false
+    testRunTitle: 'Unit Tests - $(buildConfiguration)'
+
 - task: DotNetCoreCLI@2
   displayName: 'Publish the project - $(buildConfiguration)'
   inputs:
